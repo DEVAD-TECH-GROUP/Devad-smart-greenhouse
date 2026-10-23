@@ -1,0 +1,52 @@
+/* Greenhouse UI — fonts, motion and atmosphere.
+   Import once, near the top of your main CSS (before @tailwind directives). */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+.gh-root { font-family: 'Inter', system-ui, sans-serif; }
+.gh-display { font-family: 'Sora', 'Inter', system-ui, sans-serif; }
+.gh-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+.gh-grid {
+  background-image:
+    linear-gradient(rgba(209, 250, 229, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(209, 250, 229, 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at 30% 40%, #000 20%, transparent 75%);
+}
+
+/* actuator motion */
+.gh-spin   { animation: gh-spin 0.9s linear infinite; }
+.gh-pulse  { animation: gh-pulse 2.4s ease-in-out infinite; }
+.gh-puff   { animation: gh-puff 1.8s ease-out infinite; }
+.gh-flow   { animation: gh-flow 0.8s linear infinite; }
+.gh-drip   { animation: gh-drip 1.2s ease-in infinite; }
+.gh-rain   { animation: gh-rain 0.9s ease-in infinite; }
+.gh-rise   { animation: gh-rise 2s ease-out infinite; }
+.gh-sway   { animation: gh-sway 5s ease-in-out infinite; }
+.gh-wave   { animation: gh-wave 3s linear infinite; }
+.gh-bubble { animation: gh-bubble 2s ease-in infinite; }
+.gh-ripple { animation: gh-ripple 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+
+/* page motion */
+.gh-enter  { animation: gh-enter 0.9s cubic-bezier(.2,.8,.2,1) both; }
+.gh-float  { animation: gh-float 6s ease-in-out infinite; }
+.gh-aurora { animation: gh-aurora 18s ease-in-out infinite; }
+
+@keyframes gh-spin   { to { transform: rotate(360deg); } }
+@keyframes gh-pulse  { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes gh-puff   { 0% { transform: scale(0.3); opacity: 0.9; } 100% { transform: scale(2.4) translateY(10px); opacity: 0; } }
+@keyframes gh-flow   { to { stroke-dashoffset: -13; } }
+@keyframes gh-drip   { 0% { transform: translateY(-4px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(8px); opacity: 0; } }
+@keyframes gh-rain   { 0% { transform: translateY(-6px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(18px); opacity: 0; } }
+@keyframes gh-rise   { 0% { transform: translateY(6px); opacity: 0; } 40% { opacity: 0.9; } 100% { transform: translateY(-14px); opacity: 0; } }
+@keyframes gh-sway   { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes gh-wave   { from { transform: translateX(0); } to { transform: translateX(86px); } }
+@keyframes gh-bubble { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 0.9; } 100% { transform: translateY(-70px); opacity: 0; } }
+@keyframes gh-ripple { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(3.2); opacity: 0; } }
+@keyframes gh-enter  { from { opacity: 0; transform: translateY(18px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes gh-float  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes gh-aurora { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(60px, 40px) scale(1.1); } 66% { transform: translate(-40px, 30px) scale(0.95); } }
+
+@media (prefers-reduced-motion: reduce) {
+  [class*='gh-'] { animation: none !important; }
+}

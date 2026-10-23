@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-fern-950: #0b1b16;
+  --color-fern-900: #10261f;
+  --color-fern-800: #173229;
+  --color-fern-700: #24473a;
+  --color-fern-600: #356652;
+  --color-chalk: #e9f0e4;
+  --color-chalk-dim: #a3b8aa;
+  --color-mist: #86d9cb;
+  --color-sun: #f3b53f;
+  --color-bloom: #ff7a7a;
+  --color-leaf: #9bd36a;
+}
+
+html, body, #root { min-height: 100%; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(134, 217, 203, 0.10), transparent 60%),
+    radial-gradient(700px 500px at -10% 110%, rgba(155, 211, 106, 0.07), transparent 60%),
+    var(--color-fern-950);
+  color: var(--color-chalk);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible { outline: 2px solid var(--color-sun); outline-offset: 2px; border-radius: 6px; }
+::selection { background: rgba(243, 181, 63, 0.35); }
+
+.panel {
+  background: linear-gradient(180deg, rgba(23, 50, 41, 0.85), rgba(16, 38, 31, 0.85));
+  border: 1px solid rgba(163, 184, 170, 0.14);
+  border-radius: 20px;
+}
+.field {
+  width: 100%;
+  background: rgba(11, 27, 22, 0.7);
+  border: 1px solid rgba(163, 184, 170, 0.22);
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  color: var(--color-chalk);
+  transition: border-color .15s, box-shadow .15s;
+}
+.field::placeholder { color: rgba(163, 184, 170, 0.5); }
+.field:focus { outline: none; border-color: var(--color-mist); box-shadow: 0 0 0 3px rgba(134, 217, 203, 0.18); }
+.field[aria-invalid="true"] { border-color: var(--color-bloom); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  border-radius: 12px; padding: .7rem 1.1rem; font-weight: 600; cursor: pointer;
+  transition: transform .12s, background .15s, opacity .15s;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn-primary { background: var(--color-leaf); color: #0b1b16; }
+.btn-primary:hover:not(:disabled) { background: #b0e17f; }
+.btn-ghost { background: rgba(163, 184, 170, 0.10); color: var(--color-chalk); }
+.btn-ghost:hover:not(:disabled) { background: rgba(163, 184, 170, 0.18); }
+.btn-danger { background: rgba(255, 122, 122, 0.14); color: var(--color-bloom); }
+.btn-danger:hover:not(:disabled) { background: rgba(255, 122, 122, 0.24); }
+
+/* ---------- greenhouse diagram animations ---------- */
+@keyframes gh-spin { to { transform: rotate(360deg); } }
+@keyframes gh-drip { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(20px); opacity: 0; } }
+@keyframes gh-puff { 0% { transform: translateY(0) scale(.6); opacity: 0; } 25% { opacity: .8; } 100% { transform: translateY(-34px) scale(1.5); opacity: 0; } }
+@keyframes gh-flow { to { stroke-dashoffset: -24; } }
+@keyframes gh-rain { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(34px); opacity: 0; } }
+@keyframes gh-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+.gh-spin { animation: gh-spin .55s linear infinite; }
+.gh-drip { animation: gh-drip 1.3s ease-in infinite; }
+.gh-puff { animation: gh-puff 1.8s ease-out infinite; }
+.gh-flow { animation: gh-flow .8s linear infinite; }
+.gh-rain { animation: gh-rain 1s ease-in infinite; }
+.gh-pulse { animation: gh-pulse 2.4s ease-in-out infinite; }
+
+/* one orchestrated entrance for the hero only */
+@keyframes gh-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.gh-enter { animation: gh-rise .7s cubic-bezier(.2, .7, .2, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gh-spin, .gh-drip, .gh-puff, .gh-flow, .gh-rain, .gh-pulse, .gh-enter { animation: none !important; }
+  * { transition-duration: .01ms !important; }
+}

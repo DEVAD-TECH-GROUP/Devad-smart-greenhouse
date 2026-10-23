@@ -1,0 +1,32 @@
+cat > .gitignore <<'EOF'
+# Git
+.git/
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+serviceAccount*.json
+firebase-adminsdk*.json
+Secrets.h
+**/Secrets.h
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+EOF
+
+# firebases and firemware credentials
+/firebase
+/firemware

@@ -16,22 +16,85 @@ export const DEFAULT_SETTINGS = {
 };
 
 const settingsSchema = new mongoose.Schema(
-  Object.fromEntries(Object.entries(DEFAULT_SETTINGS).map(([k, v]) => [k, { type: Number, default: v }])),
-  { _id: false }
+  Object.fromEntries(
+    Object.entries(DEFAULT_SETTINGS).map(([key, value]) => [
+      key,
+      { type: Number, default: value },
+    ]),
+  ),
+  { _id: false },
+);
+
+const viewerSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    canControl: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { _id: false },
 );
 
 const deviceSchema = new mongoose.Schema(
   {
-    deviceId: { type: String, required: true, unique: true, uppercase: true, trim: true },
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    name: { type: String, required: true, trim: true, maxlength: 60 },
-    location: { type: String, trim: true, maxlength: 80, default: '' },
-    settings: { type: settingsSchema, default: () => ({}) },
-    online: { type: Boolean, default: false },
+    deviceId: {
+      type: String,
+      required: true,
+      unique: true,
+      uppercase: true,
+      trim: true,
+    },
+
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+
+    // Each viewer has an independent control permission.
+    viewers: {
+      type: [viewerSchema],
+      default: [],
+    },
+
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 60,
+    },
+
+    location: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+      default: '',
+    },
+
+    settings: {
+      type: settingsSchema,
+      default: () => ({}),
+    },
+
+    online: {
+      type: Boolean,
+      default: false,
+    },
+
     lastSeenAt: Date,
-    claimedAt: { type: Date, default: Date.now },
+
+    claimedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Device = mongoose.model('Device', deviceSchema);

@@ -41,8 +41,25 @@ const safeEqual = (a, b) => {
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 };
 
-const present = (device) => {
+function normalizeDeviceId(value) {
+  return String(value).toUpperCase();
+}
+
+function validObjectId(value) {
+  return /^[a-f\d]{24}$/i.test(value);
+}
+
+// Return greenhouse information together with the logged-in user's
+// permissions. Always pass req.userId to this function.
+const present = (device, userId) => {
   const live = getLive(device.deviceId);
+
+  const isOwner =
+    device.owner.toString() === String(userId);
+
+  const viewer = device.viewers?.find(
+    (item) => item.user.toString() === String(userId),
+  );
 
   return {
     id: device.deviceId,
@@ -53,6 +70,7 @@ const present = (device) => {
     lastSeenAt: device.lastSeenAt,
     online: live.online,
     telemetry: live.telemetry,
+
     info: live.info
       ? {
           fw: live.info.fw,
@@ -60,20 +78,19 @@ const present = (device) => {
           ssid: live.info.ssid,
         }
       : null,
+
     settings: device.settings,
+
+    // Used by the frontend to distinguish owned and shared greenhouses.
+    permissions: {
+      isOwner,
+      canControl: isOwner || Boolean(viewer?.canControl),
+    },
   };
-};
-
-function normalizeDeviceId(value) {
-  return String(value).toUpperCase();
-}
-
-function validObjectId(value) {
-  return /^[a-f\d]{24}$/i.test(value);
 }
 
 // Owner-only access.
-// Use this for deleting the greenhouse and managing viewers.
+// Use this for deleting a greenhouse and managing its viewers.
 async function owned(req) {
   const device = await Device.findOne({
     deviceId: normalizeDeviceId(req.params.deviceId),
@@ -87,7 +104,7 @@ async function owned(req) {
   return device;
 }
 
-// Read access for the owner and every invited viewer.
+// Read access for the owner and every viewer with access.
 async function accessible(req) {
   const device = await Device.findOne({
     deviceId: normalizeDeviceId(req.params.deviceId),
@@ -128,6 +145,7 @@ async function controllable(req) {
 }
 
 // ---------- list accessible greenhouses ----------
+// A user can own greenhouses and also view greenhouses shared with them.
 router.get('/', wrap(async (req, res) => {
   const devices = await Device.find({
     $or: [
@@ -137,11 +155,12 @@ router.get('/', wrap(async (req, res) => {
   }).sort({ createdAt: 1 });
 
   res.json({
-    devices: devices.map(present),
+    devices: devices.map((device) => present(device, req.userId)),
   });
 }));
 
 // ---------- claim greenhouse ----------
+
 const claimLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 15,
@@ -182,7 +201,10 @@ router.post('/claim', claimLimiter, wrap(async (req, res) => {
   const data = claimSchema.parse(req.body);
 
   if (await Device.exists({ deviceId: data.deviceId })) {
-    throw new AppError(409, 'This device is already linked to an account.');
+    throw new AppError(
+      409,
+      'This device is already linked to an account.',
+    );
   }
 
   const info = (
@@ -228,7 +250,7 @@ router.post('/claim', claimLimiter, wrap(async (req, res) => {
   });
 
   res.status(201).json({
-    device: present(device),
+    device: present(device, req.userId),
   });
 }));
 
@@ -264,14 +286,19 @@ router.get('/:deviceId/viewers', wrap(async (req, res) => {
   });
 }));
 
-// Invite an existing registered user.
-// canControl is optional and defaults to false.
+// Grant access to an existing registered user.
+// This does not send an email; the owner grants access directly.
 router.post('/:deviceId/viewers', wrap(async (req, res) => {
   const device = await owned(req);
 
   const data = z.object({
-    email: z.string().trim().email().max(254)
+    email: z
+      .string()
+      .trim()
+      .email()
+      .max(254)
       .transform((value) => value.toLowerCase()),
+
     canControl: z.boolean().optional().default(false),
   }).parse(req.body);
 
@@ -307,7 +334,9 @@ router.post('/:deviceId/viewers', wrap(async (req, res) => {
     deviceId: device.deviceId,
     owner: device.owner,
     type: 'system',
-    message: `Viewer access granted to ${user.email}. Control access: ${data.canControl ? 'enabled' : 'disabled'}.`,
+    message:
+      `Viewer access granted to ${user.email}. ` +
+      `Control access: ${data.canControl ? 'enabled' : 'disabled'}.`,
   });
 
   res.status(201).json({
@@ -321,7 +350,7 @@ router.post('/:deviceId/viewers', wrap(async (req, res) => {
   });
 }));
 
-// Change an existing viewer's control permission.
+// Enable or disable an existing viewer's control permission.
 router.patch('/:deviceId/viewers/:userId', wrap(async (req, res) => {
   const device = await owned(req);
 
@@ -350,7 +379,9 @@ router.patch('/:deviceId/viewers/:userId', wrap(async (req, res) => {
     deviceId: device.deviceId,
     owner: device.owner,
     type: 'system',
-    message: `Control access ${canControl ? 'enabled' : 'disabled'} for ${user?.email ?? 'viewer'}.`,
+    message:
+      `Control access ${canControl ? 'enabled' : 'disabled'} ` +
+      `for ${user?.email ?? 'viewer'}.`,
   });
 
   res.json({
@@ -364,7 +395,7 @@ router.patch('/:deviceId/viewers/:userId', wrap(async (req, res) => {
   });
 }));
 
-// Remove a viewer's access completely.
+// Revoke a viewer's access completely.
 router.delete('/:deviceId/viewers/:userId', wrap(async (req, res) => {
   const device = await owned(req);
 
@@ -384,7 +415,7 @@ router.delete('/:deviceId/viewers/:userId', wrap(async (req, res) => {
 
   await device.save();
 
-  // Disconnect this user's live subscription to this greenhouse.
+  // Disconnect this user's live subscription to the greenhouse.
   removeUserFromDevice(
     removedViewer.user.toString(),
     device.deviceId,
@@ -396,7 +427,8 @@ router.delete('/:deviceId/viewers/:userId', wrap(async (req, res) => {
     deviceId: device.deviceId,
     owner: device.owner,
     type: 'system',
-    message: `Viewer access revoked for ${user?.email ?? 'a user'}.`,
+    message:
+      `Viewer access revoked for ${user?.email ?? 'a user'}.`,
   });
 
   res.json({ ok: true });
@@ -404,12 +436,12 @@ router.delete('/:deviceId/viewers/:userId', wrap(async (req, res) => {
 
 // ---------- greenhouse details ----------
 
-// Owner and viewers can read greenhouse details.
+// Owners and viewers with access can read greenhouse details.
 router.get('/:deviceId', wrap(async (req, res) => {
   const device = await accessible(req);
 
   res.json({
-    device: present(device),
+    device: present(device, req.userId),
   });
 }));
 
@@ -426,7 +458,7 @@ router.patch('/:deviceId', wrap(async (req, res) => {
   await device.save();
 
   res.json({
-    device: present(device),
+    device: present(device, req.userId),
   });
 }));
 
@@ -452,6 +484,7 @@ router.delete('/:deviceId', wrap(async (req, res) => {
 // ---------- manual actuator control ----------
 // Owner: always allowed.
 // Viewer: allowed only when canControl is true.
+
 const controlSchema = z.object({
   actuator: z.enum(ACTUATORS),
   mode: z.enum(['auto', 'on', 'off']),
@@ -490,6 +523,7 @@ router.post('/:deviceId/control', wrap(async (req, res) => {
 }));
 
 // ---------- automation settings ----------
+
 const settingsSchema = z.object({
   tempHigh: z.number().min(15).max(60),
   tempHyst: z.number().min(0.5).max(10),
@@ -518,7 +552,7 @@ const settingsSchema = z.object({
     },
   );
 
-// Owner and viewers can read settings.
+// Owners and viewers can read automation settings.
 router.get('/:deviceId/settings', wrap(async (req, res) => {
   const device = await accessible(req);
 
@@ -556,6 +590,7 @@ router.put('/:deviceId/settings', wrap(async (req, res) => {
 }));
 
 // ---------- telemetry history ----------
+
 const RANGES = {
   '1h': { ms: 3600e3, bin: 60e3 },
   '6h': { ms: 6 * 3600e3, bin: 5 * 60e3 },
@@ -609,6 +644,7 @@ router.get('/:deviceId/history', wrap(async (req, res) => {
 }));
 
 // ---------- activity ----------
+
 router.get('/:deviceId/activity', wrap(async (req, res) => {
   const device = await accessible(req);
 
@@ -634,3 +670,4 @@ router.get('/:deviceId/activity', wrap(async (req, res) => {
 }));
 
 export default router;
+
